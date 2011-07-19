@@ -1,8 +1,4 @@
 /*
- ADNS2610.cpp - Part of optical mouse sensor library for Arduino
- Copyright (c) 2008 Martijn The.  All right reserved.
- http://www.martijnthe.nl/
- 
  Based on sketches by Benoît Rousseau.
  
  This library is free software; you can redistribute it and/or
