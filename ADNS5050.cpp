@@ -1,39 +1,27 @@
-/*
- Based on sketches by Benoît Rousseau.
- 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Lesser General Public
- License as published by the Free Software Foundation; either
- version 2.1 of the License, or (at your option) any later version.
- 
- This library is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Lesser General Public License for more details.
- 
- You should have received a copy of the GNU Lesser General Public
- License along with this library; if not, write to the Free Software
- Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- */
 
-/******************************************************************************
- * Includes
- ******************************************************************************/
 
 #include "WConstants.h"
-#include "OptiMouse.h"
 #include "ADNS5050.h"
 
 /******************************************************************************
  * Definitions
  ******************************************************************************/
 
-#define MOTION				0x02
-#define Delta_Y				0x03
-#define Delta_X				0x04
-#define SQUAL				0x05
-#define PIXEL_GRAB			0x0b
-#define RESOLUTION			0x0c
+#define PRODUCT_ID          0x00 // should be 0x12
+#define PRODUCTID2          0x3e
+#define REVISION_ID         0x01
+#define DELTA_Y_REG         0x03
+#define DELTA_X_REG         0x04
+#define SQUAL_REG           0x05
+#define MAXIMUM_PIXEL_REG   0x08
+#define MINIMUM_PIXEL_REG   0x0a
+#define PIXEL_SUM_REG       0x09
+#define PIXEL_DATA_REG      0x0b
+#define SHUTTER_UPPER_REG   0x06
+#define SHUTTER_LOWER_REG   0x07
+#define RESET		    0x3a
+#define CPI500v		    0x00
+#define CPI1000v	    0x01
 
 #define CPI500v				0x00
 #define CPI1000v			0x01
@@ -43,81 +31,130 @@
  ******************************************************************************/
 
 
-ADNS5050::ADNS5050(uint8_t sclkPin, uint8_t sdioPin) : OptiMouse::OptiMouse(sclkPin, sdioPin)
+ADNS5050::ADNS5050(uint8_t sclkPin, uint8_t sdioPin, unint8_t selectPin, uint8_t resetPin )
 {
-
+	sdio = sdioPin;
+	sclk = sclkPin;
+	select = selectPin;
+	reset = resetPin;
+	
+	pinMode(sdio, OUTPUT);
+	pinMode(sclk, OUTPUT);
+	
+	pinMode(reset, OUTPUT);
+	digitalWrite(RESET, LOW);
+	
+	pinMode(select, OUTPUT);
+	
+	
 }
 
 /******************************************************************************
  * User API
  ******************************************************************************/
 
-signed char ADNS5050::dx(void)
-{
-	return (signed char) readRegister(Delta_X);
+void sync() {
+	pinMode(select, OUTPUT);
+	digitalWrite(select, LOW);
+	delayMicroseconds(2);
+	digitalWrite(select, HIGH);
 }
 
-signed char ADNS5050::dy(void)
-{
-	return (signed char) readRegister(Delta_Y);
+byte ADNS5050::dx() { 
+	return ADNS_read(DELTA_X_REG);
 }
 
-unsigned char ADNS5050::surfaceQuality()
-{
-	return (unsigned char) readRegister(SQUAL);
+byte ADNS5050::dy() { 
+	return ADNS_read(DELTA_Y_REG);
 }
 
-bool ADNS5050::motion()
-{
-	return (bool) readRegister(MOTION);
-}
+byte ADNS5050::surfaceQuality() {
+	return ADNS_read(SQUAL_REG);
 
-void ADNS5050::pixelGrab(unsigned char* fill)
-{
-	int i = 7;
-	uint8_t r = 0;
+void ADNS5050::ADNS_write(unsigned char addr, unsigned char data) {
+	char temp;
+	int n;
 	
-	// Write the address of the register we want to read:
-	pinMode (_sdioPin, OUTPUT);
-	for (; i>=0; i--)
-	{
-		digitalWrite (_sclkPin, LOW);
-		digitalWrite (_sdioPin, PIXEL_GRAB & (1 << i));
-		digitalWrite (_sclkPin, HIGH);
+	digitalWrite(select, LOW);//nADNSCS = 0; // select the chip
+	
+	temp = addr;
+	digitalWrite(sclk, LOW);//SCK = 0;					// start clock low
+	pinMode(sdio, OUTPUT);//DATA_OUT; // set data line for output
+	for (n=0; n<8; n++) {
+		digitalWrite(sclk, LOW);//SCK = 0;
+		pinMode(sdio, OUTPUT);
+		delayMicroseconds(1);
+		if (temp & 0x80)
+			digitalWrite(sdio, HIGH);//SDOUT = 1;
+		else
+			digitalWrite(sdio, LOW);//SDOUT = 0;
+		temp = (temp << 1);
+		digitalWrite(sclk, HIGH);//SCK = 1;
+		delayMicroseconds(1);//delayMicroseconds(1);			// short clock pulse
 	}
+	temp = data;
+	for (n=0; n<8; n++) {
+		digitalWrite(sclk, LOW);//SCK = 0;
+		delayMicroseconds(1);
+		if (temp & 0x80)
+			digitalWrite(sdio, HIGH);//SDOUT = 1;
+		else
+			digitalWrite(sdio, LOW);//SDOUT = 0;
+		temp = (temp << 1);
+		digitalWrite(sclk, HIGH);//SCK = 1;
+		delayMicroseconds(1);			// short clock pulse
+	}
+	delayMicroseconds(20);
+	digitalWrite(select, HIGH);//nADNSCS = 1; // de-select the chip
+}
+
+byte ADNS5050::ADNS_read(unsigned char addr) {
+	byte temp;
+	int n;
 	
-	// Switch data line from OUTPUT to INPUT
-	pinMode (_sdioPin, INPUT);
-	
-	// Wait a bit...
-	delayMicroseconds(100);
-	int j;
-	for(j=0; j<360; j++)
-	{	
-		// Fetch the data!
-		for (i=7; i>=0; i--)
-		{                             
-			digitalWrite (_sclkPin, LOW);
-			digitalWrite (_sclkPin, HIGH);
-			r |= (digitalRead (_sdioPin) << i);
-		}
-		delayMicroseconds(100);
-		fill[j] = r;
+	digitalWrite(select, LOW);//nADNSCS = 0;				// select the chip
+	temp = addr;
+	digitalWrite(sclk, OUTPUT); //SCK = 0;					// start clock low
+	pinMode(sdio, OUTPUT); //DATA_OUT;					// set data line for output
+	for (n=0; n<8; n++) {
 		
+		digitalWrite(sclk, LOW);//SCK = 0;
+		pinMode(sdio, OUTPUT); //DATA_OUT;
+		if (temp & 0x80) {
+			digitalWrite(sdio, HIGH);//SDOUT = 1;
+		} 
+		else {
+			digitalWrite(sdio, LOW);//SDOUT = 0;
+		}
+		temp = (temp << 1);
+		delayMicroseconds(1);
+		digitalWrite(sclk, HIGH); //SCK = 1;
+		delayMicroseconds(1);			// short clock pulse
 	}
+	
+	temp = 0; // This is a read, switch to input
+	pinMode(sdio, INPUT); //DATA_IN;
+	for (n=0; n<8; n++) {		// read back the data
+		digitalWrite(sclk, LOW);
+		if(digitalRead(sdio)) {// got a '1'
+			temp |= 0x1;
+		}
+		if( n != 7) temp = (temp << 1); // shift left
+		digitalWrite(sclk, HIGH);
+	}
+	
+	digitalWrite(select, HIGH);// de-select the chip
+	return temp;
 }
 
-void ADNS5050::setResolution(int res)
+void ADNS5050::pixelGrab(unsigned char *fill)
 {
-
-	if(res == 500)
+	
+	int grabCount = 0; 
+	while( grabCount < NUM_PIXELS )
 	{
-		writeRegister(RESOLUTION, CPI500v);
+		pix[grabCount] = ADNS_read(PIXEL_DATA_REG);
+		grabCount++;
 	}
-	else if(res == 1000)
-	{
-		writeRegister(RESOLUTION, CPI1000v);
-	}
-
+	
 }
-

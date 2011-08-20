@@ -19,25 +19,27 @@
 #define _ADNS5050
 
 #include <inttypes.h>
-#include "OptiMouse.h"
 
 #undef abs
 #undef round
 
-class ADNS5050 : public OptiMouse
+class ADNS5050
 {
   private:
-  public:
-	ADNS5050(uint8_t, uint8_t);
-	signed char dx(void);
-	signed char dy(void);
 	
-	unsigned char surfaceQuality();
+	int sclk, sdio, select, reset;
+	
+  public:
+	ADNS5050(uint8_t sclkPin, uint8_t sdioPin, unint8_t selectPin, uint8_t resetPin);
+	byte dx();
+	byte dy();
+	
+	byte surfaceQuality();
 	bool motion();
 	
 	// NB this is not a particularly fast operation
 	void pixelGrab(unsigned char* fill);
-	void setResolution(int res);
+	//void setResolution(int res);
 	
 };
 
