@@ -64,26 +64,24 @@ int ADNS5050::dx() {
 	
 	byte x = ADNS_read(DELTA_X_REG);
 	
-	if( x & 0x80 ) {
-		x ^= 0x80;
-		return (int) -1 * x;
-	}
-	
-	x ^= 0x80;
-	return (int) x;
+	int xv = (int16_t)x;
+    if (x & 0x80) {					// negative value
+		x = ~x + 1;
+		xv = (0 - (int16_t)x);
+    }
+	return xv;
 }
 
 int ADNS5050::dy() { 
 	
 	byte y = ADNS_read(DELTA_Y_REG);
 	
-	if( y & 0x80 ) {
-		y ^= 0x80;
-		return (int) -1 * y;
-	}
-	
-	y ^= 0x80;
-	return (int) y;
+	int yv = (int16_t)y;
+    if (y & 0x80) {					// negative number
+		y = ~y + 1;
+		yv = (0 - (int16_t)y);
+    }
+	return yv;
 }
 
 byte ADNS5050::surfaceQuality() {
