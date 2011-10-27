@@ -60,16 +60,35 @@ void sync() {
 	digitalWrite(select, HIGH);
 }
 
-byte ADNS5050::dx() { 
-	return ADNS_read(DELTA_X_REG);
+int ADNS5050::dx() { 
+	
+	byte x = ADNS_read(DELTA_X_REG);
+	
+	if( x & 0x80 ) {
+		x ^= 0x80;
+		return (int) -1 * x;
+	}
+	
+	x ^= 0x80;
+	return (int) x;
 }
 
-byte ADNS5050::dy() { 
-	return ADNS_read(DELTA_Y_REG);
+int ADNS5050::dy() { 
+	
+	byte y = ADNS_read(DELTA_Y_REG);
+	
+	if( y & 0x80 ) {
+		y ^= 0x80;
+		return (int) -1 * y;
+	}
+	
+	y ^= 0x80;
+	return (int) y;
 }
 
 byte ADNS5050::surfaceQuality() {
 	return ADNS_read(SQUAL_REG);
+}
 
 void ADNS5050::ADNS_write(unsigned char addr, unsigned char data) {
 	char temp;
