@@ -30,6 +30,7 @@ class ADNS5050
 	int sclk, sdio, select, reset;
 	
   public:
+	
 	ADNS5050(uint8_t sclkPin, uint8_t sdioPin, unint8_t selectPin, uint8_t resetPin);
 	byte dx();
 	byte dy();
@@ -38,7 +39,9 @@ class ADNS5050
 	bool motion();
 	
 	// NB this is not a particularly fast operation
+	// don't call it more than 20 times a second
 	void pixelGrab(unsigned char* fill);
+	void ADNS_read7(unsigned char addr);
 	//void setResolution(int res);
 	
 };
