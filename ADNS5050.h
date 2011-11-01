@@ -23,25 +23,32 @@
 #undef abs
 #undef round
 
+#define NUM_PIXELS 360
+
 class ADNS5050
 {
   private:
 	
-	int sclk, sdio, select, reset;
+	int sclk, sdio, selectPin, resetPin;
 	
   public:
 	
-	ADNS5050(uint8_t sclkPin, uint8_t sdioPin, unint8_t selectPin, uint8_t resetPin);
-	byte dx();
-	byte dy();
+	ADNS5050(int sclkPin, int sdioPin, int _selectPin, int _resetPin);
+	int dx();
+	int dy();
 	
-	byte surfaceQuality();
+	unsigned char surfaceQuality();
 	bool motion();
+
+        void sync();
+        
+        unsigned char ADNS_read(unsigned char addr);
+        void ADNS_write(unsigned char addr, unsigned char data);
 	
 	// NB this is not a particularly fast operation
 	// don't call it more than 20 times a second
 	void pixelGrab(unsigned char* fill);
-	void ADNS_read7(unsigned char addr);
+	unsigned char ADNS_read7(unsigned char addr);
 	//void setResolution(int res);
 	
 };
