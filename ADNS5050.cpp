@@ -19,9 +19,9 @@
 #define PIXEL_DATA_REG      0x0b
 #define SHUTTER_UPPER_REG   0x06
 #define SHUTTER_LOWER_REG   0x07
-#define reset		    0x3a
-#define CPI500v		    0x00
-#define CPI1000v	    0x01
+#define reset				0x3a
+#define CPI500v				0x00
+#define CPI1000v			0x01
 
 #define CPI500v				0x00
 #define CPI1000v			0x01
@@ -29,6 +29,11 @@
 /******************************************************************************
  * Constructors
  ******************************************************************************/
+
+#ifdef __AVR_AT90__ 
+#define MICROSEC_DELAY      10
+#else
+#define MICROSEC_DELAY      2
 
 
 ADNS5050::ADNS5050(int sclkPin, int sdioPin, int _selectPin, int _resetPin )
@@ -89,119 +94,130 @@ byte ADNS5050::surfaceQuality() {
   return ADNS_read(SQUAL_REG);
 }
 
-void ADNS5050::ADNS_write(unsigned char addr, unsigned char data) {
-  char temp;
-  int n;
-
-  digitalWrite(selectPin, LOW);//nADNSCS = 0; // select the chip
-
-  temp = addr | 0x80;
-  digitalWrite(sclk, LOW);//SCK = 0;					// start sclk low
-  pinMode(sdio, OUTPUT);//DATA_OUT; // set data line for output
-  for (n=0; n<8; n++) {
-    digitalWrite(sclk, LOW);//SCK = 0;
-    pinMode(sdio, OUTPUT);
-    delayMicroseconds(1);
-    if (temp & 0x80)
-      digitalWrite(sdio, HIGH);//SDOUT = 1;
-    else
-      digitalWrite(sdio, LOW);//SDOUT = 0;
-    temp = (temp << 1);
-    digitalWrite(sclk, HIGH);//SCK = 1;
-    delayMicroseconds(1);	// short sclk pulse
-  }
-  temp = data;
-  for (n=0; n<8; n++) {
-    digitalWrite(sclk, LOW);//SCK = 0;
-    delayMicroseconds(1);
-    if (temp & 0x80)
-      digitalWrite(sdio, HIGH);//SDOUT = 1;
-    else
-      digitalWrite(sdio, LOW);//SDOUT = 0;
-    temp = (temp << 1);
-    digitalWrite(sclk, HIGH);
-    delayMicroseconds(1); // short sclk pulse
-  }
-  delayMicroseconds(10);
-  digitalWrite(selectPin, HIGH); // de-select the chip
-}
-
-byte ADNS5050::ADNS_read(unsigned char addr) {
-  byte temp;
-  int n;
-
-  digitalWrite(selectPin, LOW); //nADNSCS = 0;				// select the chip
-  temp = addr;
-  digitalWrite(sclk, OUTPUT); //SCK = 0  start clock low
-  pinMode(sdio, OUTPUT); //DATA_OUT set data line for output
-  for (n=0; n<8; n++) {
-
-    digitalWrite(sclk, LOW); //SCK = 0;
-    pinMode(sdio, OUTPUT); //DATA_OUT;
-    if (temp & 0x80) {
-      digitalWrite(sdio, HIGH); //SDOUT = 1;
-    } 
-    else {
-      digitalWrite(sdio, LOW); //SDOUT = 0;
-    }
-    temp = (temp << 1);
-    digitalWrite(sclk, HIGH); //SCK = 1;
-  }
-
-  temp = 0; // This is a read, switch to input
-  pinMode(sdio, INPUT); //DATA_IN;
-  for (n=0; n<8; n++) { // read back the data
-    digitalWrite(sclk, LOW);
-    if(digitalRead(sdio)) { // got a '1'
-      temp |= 0x1;
-    }
-    if( n != 7) temp = (temp << 1); // shift left
-    digitalWrite(sclk, HIGH);
-  }
-  delayMicroseconds(20);
-  digitalWrite(selectPin, HIGH);// de-select the chip
-  return temp;
-}
-
-byte ADNS5050::ADNS_read7(unsigned char addr)
+void ADNS_write(unsigned char addr, unsigned char data) 
 {
-  byte temp;
-  int n;
+	char temp;
+	int n;
+	
+	digitalWrite(NCS, LOW);//nADNSCS = 0; // select the chip
+	
+	temp = addr | 0x80; // MOST RECENT
+	
+	digitalWrite(SCLK, LOW); //SCK = 0;					// start clock low
+	pinMode(SDIO, OUTPUT); //DATA_OUT; // set data line for output
+	for (n=0; n<8; n++) {
+		digitalWrite(SCLK, LOW); //SCK = 0;
+		pinMode(SDIO, OUTPUT);
+		delayMicroseconds(MICROSEC_DELAY);
+		if (temp & 0x80)
+			digitalWrite(SDIO, HIGH); //SDOUT = 1;
+		else
+			digitalWrite(SDIO, LOW);//SDOUT = 0;
+		temp = (temp << 1);
+		digitalWrite(SCLK, HIGH);//SCK = 1;
+		delayMicroseconds(MICROSEC_DELAY);//delayMicroseconds(1);			// short clock pulse
+	}
+	temp = data;
+	for (n=0; n<8; n++) {
+		delayMicroseconds(MICROSEC_DELAY);
+		digitalWrite(SCLK, LOW);//SCK = 0;
+		delayMicroseconds(MICROSEC_DELAY);
+		if (temp & 0x80)
+			digitalWrite(SDIO, HIGH);//SDOUT = 1;
+		else
+			digitalWrite(SDIO, LOW);//SDOUT = 0;
+		temp = (temp << 1);
+		digitalWrite(SCLK, HIGH);//SCK = 1;
+		delayMicroseconds(1);			// short clock pulse
+	}
+	delayMicroseconds(20);
+	digitalWrite(NCS, HIGH); //nADNSCS = 1; // de-select the chip
+}
 
-  digitalWrite(selectPin, LOW); //nADNSCS = 0 select the chip
-  temp = addr;
-  digitalWrite(sclk, HIGH); //SCK = 0 start sclk low
-  pinMode(sdio, OUTPUT); //DATA_OUT set data line for output
+byte ADNS_read(unsigned char addr)
+{
+	byte temp;
+	int n;
+	
+	digitalWrite(NCS, LOW); //nADNSCS = 0;				// select the chip
+	temp = addr;
+	digitalWrite(SCLK, OUTPUT); //SCK = 0  start clock low
+	pinMode(SDIO, OUTPUT); //DATA_OUT set data line for output
+	for (n=0; n<8; n++) {
+		delayMicroseconds(MICROSEC_DELAY);
+		digitalWrite(SCLK, LOW); //SCK = 0;
+		delayMicroseconds(MICROSEC_DELAY);
+		pinMode(SDIO, OUTPUT); //DATA_OUT;
+		if (temp & 0x80) {
+			digitalWrite(SDIO, HIGH); //SDOUT = 1;
+		} 
+		else {
+			digitalWrite(SDIO, LOW); //SDOUT = 0;
+		}
+		delayMicroseconds(MICROSEC_DELAY);
+		temp = (temp << 1);
+		digitalWrite(SCLK, HIGH); //SCK = 1;
+	}
+	
+	temp = 0; // This is a read, switch to input
+	pinMode(SDIO, INPUT); //DATA_IN;
+	for (n=0; n<8; n++) { // read back the data
+		delayMicroseconds(MICROSEC_DELAY);
+		digitalWrite(SCLK, LOW);
+		delayMicroseconds(MICROSEC_DELAY);
+		if(digitalRead(SDIO)) { // got a '1'
+			temp |= 0x1;
+		}
+		if( n != 7) temp = (temp << 1); // shift left
+		delayMicroseconds(MICROSEC_DELAY);
+		digitalWrite(SCLK, HIGH);
+	}
+	delayMicroseconds(20);
+	digitalWrite(NCS, HIGH);// de-select the chip
+	return temp;
+}
 
-  for (n=0; n<8; n++) {
-
-    digitalWrite(sclk, LOW); //SCK = 0;
-    if (temp & 0x80) {
-      digitalWrite(sdio, HIGH); //SDOUT = 1;
-    } 
-    else {
-      digitalWrite(sdio, LOW); //SDOUT = 0;
-    }
-    temp = (temp << 1);
-    digitalWrite(sclk, HIGH); //SCK = 1;
-    // short sclk pulse
-  }
-
-  temp = 0; // This is a read, switch to input
-
-  pinMode(sdio, INPUT); //DATA_IN;
-  for (n=0; n < 7; n++) { // read back the data
-    digitalWrite(sclk, LOW);
-    delayMicroseconds(10);
-    if(digitalRead(sdio)) { // got a '1'
-      temp |= 0x1;
-    }
-    digitalWrite(sclk, HIGH);
-    if( n != 6 ) temp = (temp << 1); // shift left
-  }
-
-  digitalWrite(selectPin, HIGH);// de-select the chip
-  return temp;
+byte ADNS_readPix(unsigned char addr)
+{
+	byte temp;
+	int n;
+	
+	digitalWrite(NCS, LOW); //nADNSCS = 0 select the chip
+	temp = addr;
+	digitalWrite(SCLK, HIGH); //SCK = 0 start clock low
+	pinMode(SDIO, OUTPUT); //DATA_OUT set data line for output
+	
+	for (n=0; n<8; n++) {
+		digitalWrite(SCLK, LOW); //SCK = 0;
+		delayMicroseconds(MICROSEC_DELAY);
+		if (temp & 0x80) {
+			digitalWrite(SDIO, HIGH); //SDOUT = 1;
+		} 
+		else {
+			digitalWrite(SDIO, LOW); //SDOUT = 0;
+		}
+		temp = (temp << 1);
+		//delayMicroseconds(1);
+		digitalWrite(SCLK, HIGH); //SCK = 1;
+		delayMicroseconds(MICROSEC_DELAY); // short clock pulse
+	}
+	
+	temp = 0; // This is a read, switch to input
+	
+	pinMode(SDIO, INPUT); //DATA_IN;
+	for (n=0; n < 7; n++) { // read back the data
+		digitalWrite(SCLK, LOW);
+		delayMicroseconds(MICROSEC_DELAY);
+		if(digitalRead(SDIO)) { // got a '1'
+			temp |= 0x1;
+		}
+		digitalWrite(SCLK, HIGH);
+		delayMicroseconds(MICROSEC_DELAY);
+		if( n != 6 ) temp = (temp << 1); // shift left
+	}
+	
+	digitalWrite(NCS, HIGH);// de-select the chip
+	return temp;
 }
 
 void ADNS5050::pixelGrab(unsigned char *fill)
