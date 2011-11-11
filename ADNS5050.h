@@ -29,21 +29,21 @@ class ADNS5050
 {
   private:
 	
-	int sclk, sdio, selectPin, resetPin;
+	int sclkPin, sdioPin, selectPin, resetPin;
 	
   public:
 	
-	ADNS5050(int sclkPin, int sdioPin, int _selectPin, int _resetPin);
+	ADNS5050(int sclk, int sdio, int _select, int _reset);
 	int dx();
 	int dy();
 	
 	unsigned char surfaceQuality();
 	bool motion();
 
-        void sync();
+	void sync();
         
-        unsigned char ADNS_read(unsigned char addr);
-        void ADNS_write(unsigned char addr, unsigned char data);
+	unsigned char ADNS_read(unsigned char addr);
+	void ADNS_write(unsigned char addr, unsigned char data);
 	
 	// NB this is not a particularly fast operation
 	// don't call it more than 20 times a second
