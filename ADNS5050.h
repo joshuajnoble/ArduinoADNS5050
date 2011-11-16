@@ -48,7 +48,7 @@ class ADNS5050
 	// NB this is not a particularly fast operation
 	// don't call it more than 20 times a second
 	void pixelGrab(unsigned char* fill);
-	unsigned char ADNS_read7(unsigned char addr);
+        unsigned char ADNS_readPix(unsigned char addr);
 	//void setResolution(int res);
 	
 };
